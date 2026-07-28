@@ -23,6 +23,6 @@ jobs:
           key: ${{secrets.SSH_PRIVATE_KEY}}
           port: 22
           script: |
-            cd /home/ubuntu/spotsure
+            cd /home/ubuntu/devops-Spotsure
             git pull origin main
             docker compose up -d
