@@ -345,13 +345,85 @@ Let's Encrypt certificates expire every **90 days**. A cron job was configured o
 
 ---
 
-## 11. Live Deployment
+## 11. Bonus: Monitoring with Grafana + Prometheus
+
+As an additional bonus, a full **monitoring stack** has been deployed to track real-time server metrics (CPU, RAM, Disk, Network).
+
+### Monitoring Architecture
+
+```mermaid
+graph LR
+    NodeExporter["Node Exporter<br/>(Collects Metrics)"] -->|":9100"| Prometheus["Prometheus<br/>(Stores Metrics)"]
+    Prometheus -->|":9090"| Grafana["Grafana<br/>(Visualizes Metrics)"]
+    NGINX -->|"monitoring.saikbiradar.in"| Grafana
+```
+
+### Stack Components
+
+| Container | Image | Role |
+| :--- | :--- | :--- |
+| `node-exporter` | `prom/node-exporter` | Collects host system metrics (CPU, RAM, Disk, Network) from `/proc` and `/sys` |
+| `prometheus` | `prom/prometheus` | Scrapes Node Exporter every 15 seconds and stores time-series data |
+| `grafana` | `grafana/grafana` | Web-based dashboard that queries Prometheus and renders beautiful charts |
+
+### Prometheus Configuration (`prometheus.yml`)
+
+```yaml
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'node'
+    static_configs:
+      - targets: ['node-exporter:9100']
+```
+
+Prometheus uses Docker's internal DNS to resolve `node-exporter` and scrape metrics from port `9100` every 15 seconds.
+
+### NGINX Routing
+
+NGINX reverse proxies `monitoring.saikbiradar.in` to the Grafana container on port `3000`:
+
+```nginx
+server {
+    listen 443 ssl;
+    server_name monitoring.saikbiradar.in;
+
+    ssl_certificate /etc/letsencrypt/live/monitoring.saikbiradar.in/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/monitoring.saikbiradar.in/privkey.pem;
+
+    location / {
+        proxy_pass http://grafana:3000;
+    }
+}
+```
+
+### How to Set Up the Grafana Dashboard
+
+1. **Access Grafana**: Navigate to [https://monitoring.saikbiradar.in](https://monitoring.saikbiradar.in).
+2. **Login**: Default credentials are `admin` / `Saikiran`.
+3. **Add Data Source**:
+   - Go to **Connections** → **Data Sources** → **Add data source**.
+   - Select **Prometheus**.
+   - Set the Prometheus server URL to: `http://prometheus:9090`
+     *(This is an internal Docker DNS name, not a public URL).*
+   - Click **Save & test** — you should see a green checkmark.
+4. **Import Dashboard**:
+   - Go to **Dashboards** → **Import**.
+   - Enter Dashboard ID: **`1860`** (Node Exporter Full) and click **Load**.
+   - Select the **Prometheus** data source from the dropdown.
+   - Click **Import**.
+5. **View Metrics**: The dashboard will display real-time CPU usage, RAM consumption, Disk I/O, Network traffic, and more.
+
+---
+
+## 12. Live Deployment
 
 | | |
 | :--- | :--- |
-| **Live URL (HTTPS)** | [https://saikbiradar.in](https://saikbiradar.in) |
-| **Live URL (HTTP)** | [http://saikbiradar.in](http://saikbiradar.in) *(auto-redirects to HTTPS)* |
+| **Chat App (HTTPS)** | [https://saikbiradar.in](https://saikbiradar.in) |
+| **Monitoring (HTTPS)** | [https://monitoring.saikbiradar.in](https://monitoring.saikbiradar.in) |
 | **Public IP** | `34.207.68.52` |
 | **Status** | 🔒 Secured & Operational |
-| **SSL Certificate** | Let's Encrypt (valid until Oct 27, 2026) |
+| **SSL Certificates** | Let's Encrypt (valid until Oct 27, 2026) |
 | **Multi-User Chat** | Open multiple browser tabs to test real-time WebSocket messaging |
