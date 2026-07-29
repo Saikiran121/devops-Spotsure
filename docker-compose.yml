@@ -7,6 +7,9 @@ services:
     expose:
       - "8000"
     restart: always
+    depends_on:
+      redis:
+        condition: service_healthy
 
   nginx:
     image: nginx:alpine
@@ -30,6 +33,20 @@ services:
     volumes:
       - ./certbot/conf:/etc/letsencrypt
       - ./certbot/www:/var/www/certbot
+  
+  redis:
+    image: redis:alpine 
+    container_name: chat-redis
+    restart: always
+    expose:
+      - "6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   prometheus:
     image: prom/prometheus:latest
@@ -71,3 +88,4 @@ services:
 volumes:
   prometheus_data:
   grafana_data:
+  redis_data:

@@ -417,7 +417,65 @@ server {
 
 ---
 
-## 12. Live Deployment
+## 12. Bonus: Redis Infrastructure
+
+A production-ready **Redis** container has been provisioned as part of the infrastructure to enable future horizontal scaling of the WebSocket application.
+
+### Why Redis?
+
+In a single-server setup, all WebSocket connections live in the same process memory, so broadcasting messages works out of the box. However, when scaling horizontally behind a **Load Balancer** with multiple backend instances, users connected to different servers cannot communicate with each other.
+
+Redis solves this by acting as a **central message broker** using its Pub/Sub feature:
+
+```mermaid
+graph LR
+    UserA["User A"] --> Server1["Backend Instance 1"]
+    UserB["User B"] --> Server2["Backend Instance 2"]
+    Server1 -->|"PUBLISH"| Redis["Redis<br/>(Pub/Sub Broker)"]
+    Server2 -->|"SUBSCRIBE"| Redis
+    Redis -->|"Broadcast"| Server2
+```
+
+When Backend Instance 1 receives a message from User A, it **publishes** it to a Redis channel. Backend Instance 2 is **subscribed** to the same channel and receives the message, then broadcasts it to User B. This ensures real-time communication works across all server instances.
+
+### Docker Compose Configuration
+
+```yaml
+redis:
+  image: redis:alpine
+  container_name: chat-redis
+  restart: always
+  expose:
+    - "6379"
+  volumes:
+    - redis_data:/data
+  healthcheck:
+    test: ["CMD", "redis-cli", "ping"]
+    interval: 10s
+    timeout: 5s
+    retries: 3
+```
+
+### Key Design Decisions
+
+| Decision | Rationale |
+| :--- | :--- |
+| `redis:alpine` | Minimal image size (~30MB) for faster deployments |
+| `expose` instead of `ports` | Redis is only accessible within the Docker network — **not exposed to the public internet** for security |
+| `volumes: redis_data:/data` | Persistent storage ensures cached data survives container restarts |
+| `healthcheck` | The `backend` service uses `depends_on: condition: service_healthy` to ensure Redis is fully ready before the application starts |
+
+### Connectivity
+
+Redis is accessible to all containers on the Docker network at:
+```
+redis:6379
+```
+This uses Docker's internal DNS resolution — no public ports or firewall rules required.
+
+---
+
+## 13. Live Deployment
 
 | | |
 | :--- | :--- |
