@@ -1,0 +1,27 @@
+
+
+aws_region             = "us-east-1"
+project_name           = "spotsure-chat"
+domain_name             = "saikbiradar.in"
+monitoring_domain_name  = "monitoring.saikbiradar.in"
+
+vpc_cidr               = "10.20.0.0/16"
+availability_zones     = ["us-east-1a", "us-east-1b"]
+public_subnet_cidrs    = ["10.20.0.0/24", "10.20.1.0/24"]
+private_subnet_cidrs   = ["10.20.10.0/24", "10.20.11.0/24"]
+single_nat_gateway     = false # true = cheaper (1 NAT GW), false = HA (1 per AZ)
+
+instance_type          = "t3.small"
+key_pair_name          = null   # e.g. "spotsure-key" - leave null to rely on SSM Session Manager only
+admin_cidr             = "203.0.113.10/32" # YOUR IP, never 0.0.0.0/0 if you set key_pair_name
+
+asg_min_size              = 1
+asg_desired_capacity      = 2
+asg_max_size              = 4
+cpu_target_tracking_value = 70
+
+git_repo_url = "https://github.com/Saikiran121/devops-Spotsure.git"
+git_branch   = "main"
+
+enable_redis     = true
+redis_node_type  = "cache.t3.micro"
