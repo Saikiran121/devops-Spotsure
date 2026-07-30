@@ -475,7 +475,43 @@ This uses Docker's internal DNS resolution — no public ports or firewall rules
 
 ---
 
-## 13. Live Deployment
+## 13. Bonus: AWS Architecture (Load Balancing & Auto Scaling)
+
+To ensure high availability, fault tolerance, and the ability to handle traffic spikes, the application is designed to be deployed using AWS Auto Scaling and an Application Load Balancer (ALB).
+
+### Load Balancer Architecture
+
+The **AWS Application Load Balancer (ALB)** sits in front of the EC2 instances and acts as the single point of entry for all internet traffic.
+
+```mermaid
+graph TD
+    UserBrowser["User Browser"] -->|HTTPS (443)| ALB["AWS ALB<br/>(Terminates SSL via ACM)"]
+    ALB -->|HTTP (80)| Instance1["EC2 Instance 1<br/>(NGINX + FastAPI)"]
+    ALB -->|HTTP (80)| Instance2["EC2 Instance 2<br/>(NGINX + FastAPI)"]
+    Instance1 --> Redis["Redis Cache<br/>(Pub/Sub)"]
+    Instance2 --> Redis
+```
+
+#### Key Load Balancer Configurations:
+1. **AWS Certificate Manager (ACM)**: Instead of manually managing Let's Encrypt certificates on individual servers, the ALB terminates SSL connections using a free, auto-renewing certificate provisioned by AWS ACM. This offloads cryptographic workloads from the EC2 instances.
+2. **Sticky Sessions (Session Affinity)**: Because the application uses persistent **WebSockets**, the ALB Target Group must be configured with Sticky Sessions. This ensures that once a user establishes a WebSocket handshake with a specific EC2 instance, all subsequent packets for that session are routed to the same instance.
+3. **Health Checks**: The ALB pings the EC2 instances every 30 seconds. If an instance becomes unresponsive, the ALB stops routing traffic to it until it recovers.
+
+### Auto Scaling Approach
+
+An **Auto Scaling Group (ASG)** automatically adjusts the number of running EC2 instances based on real-time application load.
+
+#### Scaling Implementation:
+1. **Launch Template**: A custom Amazon Machine Image (AMI) is created containing Docker, Docker Compose, and a User Data script. When the ASG launches a new instance, the User Data script automatically runs `git pull` and `docker compose up -d` to bootstrap the application without human intervention.
+2. **Capacity Rules**:
+   - **Minimum**: 1 instance (always running).
+   - **Desired**: 2 instances (normal operation).
+   - **Maximum**: 4 instances (peak traffic limit).
+3. **Scaling Policy**: A **Target Tracking Scaling Policy** is used. If average CPU utilization across the instances exceeds **70%**, the ASG launches a new EC2 instance and registers it with the ALB. When traffic subsides and CPU falls below the threshold, the ASG gracefully terminates the extra instances to optimize cloud costs.
+
+---
+
+## 14. Live Deployment
 
 | | |
 | :--- | :--- |
