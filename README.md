@@ -511,13 +511,24 @@ An **Auto Scaling Group (ASG)** automatically adjusts the number of running EC2 
 
 ---
 
-## 14. Live Deployment
+## 14. Infrastructure as Code (Terraform)
+
+The entire AWS infrastructure is fully automated and provisioned using **Terraform**, located in the `terraform-infra/` directory.
+
+### Highlights:
+- **State Management**: Terraform state is stored securely in an **S3 bucket** with state locking enabled via **DynamoDB**.
+- **Modular Design**: The codebase is split into reusable modules (`vpc`, `security`, `alb`, `asg`, `redis`, `acm`).
+- **Zero-Downtime Deployments**: The Auto Scaling Group is configured with an `instance_refresh` block, enabling zero-downtime rolling deployments when the Launch Template changes.
+- **Shared Redis Broker**: Provisions a multi-AZ ElastiCache Redis cluster so that WebSockets can scale horizontally across multiple instances.
+
+---
+
+## 15. Live Deployment
 
 | | |
 | :--- | :--- |
 | **Chat App (HTTPS)** | [https://saikbiradar.in](https://saikbiradar.in) |
 | **Monitoring (HTTPS)** | [https://monitoring.saikbiradar.in](https://monitoring.saikbiradar.in) |
-| **Public IP** | `34.207.68.52` |
-| **Status** | 🔒 Secured & Operational |
-| **SSL Certificates** | Let's Encrypt (valid until Oct 27, 2026) |
+| **Status** | 🔒 Secured, Auto-Scaled & Operational |
+| **SSL Certificates** | AWS Certificate Manager (ACM) |
 | **Multi-User Chat** | Open multiple browser tabs to test real-time WebSocket messaging |
